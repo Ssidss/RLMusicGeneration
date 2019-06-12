@@ -4,8 +4,8 @@ import sys
 import os
 
 
-lowerBound = 12   #C3 36
-upperBound = 127  #B7 71
+lowerBound = 36   #C3 36
+upperBound = 71  #B7 71
 tones = {'C3' :  2,
          'C#3':  3, 
          'D3' :  4,
@@ -47,7 +47,7 @@ Melody_name = [ "main","vocal","guit","lead","guitar","vocal",
 
 
 def notelen(note_tick,A):
-    for i in range(min(note_tick//32,7)) :
+    for i in range(min(note_tick//32,3)) :
         A.append(1)
         #A+=int(1)
     return A
@@ -61,6 +61,8 @@ def notetotrain():
     labels.pop()
     data  = []
     label = []
+    maxlen = 511
+    minlen = maxlen / 2
     midilist = os.listdir("./MIDIs")
     midilist.sort()
     datapath = "./MIDIs"
@@ -75,23 +77,28 @@ def notetotrain():
         for mm in midinote:
             md = mm
             while (len(md)>0): 
-                if len(md) < 64:
-                    md = []
-                elif len(md) >= 127 :
-                    mdp = md[0:127]
+                if md[0] == 1 or md[0] == 0:
+                    md = md[1:]
+                    continue
+                if len(md) < minlen:
+                    break
+                    #md = []
+                elif len(md) >= maxlen :
+                    mdp = md[0:maxlen]
                     mdp.append(int(md[0]))
                     #mdp += md[0]
                     data.append(mdp)
                     label.append(lname)
-                    md = md[127:]
-                elif len(md)>=64 and len(md)<127:
+                    md = md[maxlen:]
+                elif len(md)>minlen and len(md)<maxlen:
                     mdp = md
-                    mdp += md[0:(127-len(md))]
+                    mdp += md[0:(maxlen-len(md))]
                     mdp.append(int(md[0]))
                     #mdp += md[0]
                     data.append(mdp)
                     label.append(lname)
-                    md = []
+                    break
+                    #md = []
         labelp += 1
     print ("training data done")
 
@@ -186,7 +193,7 @@ def miditonote(midifile):
                         first_note = False
                     continue
                 if (i.pitch < lowerBound) or (i.pitch >= upperBound) :
-                    output.append(int(i.pitch%12 + 24)  )  
+                    output.append(int(i.pitch%12 + 48)  )  
                     #output += int(i.pitch%12+24)
                     # print "Note {} at time {} out of bounds (ignoring)".format(evt.pitch, time)
                 else:
