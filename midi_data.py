@@ -34,10 +34,14 @@ base_tones = {'0':'C',
               '10':'A#',
               '11':'B'}
 
+Melody_name = [ "main","vocal","lead","vocal",
+                "piano","sax","solo","melody","rhythm",
+                "harmonica","song","music"]
+'''
 Melody_name = [ "main","vocal","guit","lead","guitar","vocal",
                 "piano","sax","solo","melody","rhythm","think","string",
                 "harmonica","song","gtr","gt","music"]                
-                       
+   '''                    
 
 
 #len(note)
@@ -47,7 +51,7 @@ Melody_name = [ "main","vocal","guit","lead","guitar","vocal",
 
 
 def notelen(note_tick,A):
-    for i in range(min(note_tick//32,3)) :
+    for i in range(min(note_tick//48,7)) :
         A.append(1)
         #A+=int(1)
     return A
@@ -91,7 +95,7 @@ def notetotrain():
                     label.append(lname)
                     md = md[maxlen:]
                 elif len(md)>minlen and len(md)<maxlen:
-                    mdp = md
+                    mdp = md[0:]
                     mdp += md[0:(maxlen-len(md))]
                     mdp.append(int(md[0]))
                     #mdp += md[0]
@@ -185,7 +189,7 @@ def miditonote(midifile):
                     if first_note :
                         last_note = i.pitch
                         output = notelen(i.tick,output)
-                        output.append(int(i.pitch))
+                        output.append(int(i.pitch)-35)
                         #output += int(i.pitch)
                         #t_note  =  base_tones [str(i.pitch % 12)]
                         #t_range =  i.pitch // 12
@@ -193,7 +197,7 @@ def miditonote(midifile):
                         first_note = False
                     continue
                 if (i.pitch < lowerBound) or (i.pitch >= upperBound) :
-                    output.append(int(i.pitch%12 + 48)  )  
+                    output.append(int(i.pitch%12 + 48)-35  )  
                     #output += int(i.pitch%12+24)
                     # print "Note {} at time {} out of bounds (ignoring)".format(evt.pitch, time)
                 else:
@@ -203,7 +207,7 @@ def miditonote(midifile):
                     else:
                         last_note = i.pitch
                         output = notelen(i.tick,output)
-                        output.append(int(i.pitch))
+                        output.append(int(i.pitch)-35)
                         #output += int(i.pitch)
                         #t_note  =  base_tones [str(i.pitch % 12)]
                         #t_range =  i.pitch // 12
