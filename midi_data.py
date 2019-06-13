@@ -65,7 +65,7 @@ def notetotrain():
     labels.pop()
     data  = []
     label = []
-    maxlen = 511
+    maxlen = 127
     minlen = maxlen / 2
     midilist = os.listdir("./MIDIs")
     midilist.sort()

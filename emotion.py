@@ -19,7 +19,7 @@ import keras
 
 def cmodel():
     
-    learning_rate = 0.0000001
+    learning_rate = 0.000025
     input_dime = 38
     #train_x += test_x
     #train_y += test_y
@@ -33,7 +33,7 @@ def cmodel():
     seed = 7
     np.random.seed(seed)
     model = Sequential()
-    model.add(Embedding(input_dim=38,output_dim=38,mask_zero=True))
+    model.add(Embedding(input_dim=38,output_dim=128,mask_zero=True))
     #model.add(Bidirectional(LSTM(1024,return_sequences=True),input_shape=(52,1)))
     
     model.add(LSTM(1024,return_sequences=True))
@@ -41,12 +41,12 @@ def cmodel():
     model.add(LSTM(1024,return_sequences=False))
     model.add(Dropout(0.3))
     model.add(Dense(num_class,
-          kernel_initializer=keras.initializers.random_normal(stddev=0.1),
+          kernel_initializer=keras.initializers.random_normal(stddev=0.05),
           activation='softmax'))
     print(model.summary())
     adam = Adam(learning_rate)
     model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['acc'])
-    model.fit(train_x,train_y,batch_size=16,epochs=40,verbose=1,validation_data=(test_x,test_y))
+    model.fit(train_x,train_y,batch_size=64,epochs=4000,verbose=1,validation_data=(test_x,test_y))
     mp = "./model.h5"
     model.save(mp)
      
