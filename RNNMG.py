@@ -1,4 +1,4 @@
-import gym
+#import gym
 import numpy as np
 import random
 import keras
@@ -8,7 +8,7 @@ from keras.layers import Dense, Dropout
 from keras.optimizers import Adam
 from keras.layers import Dense,Embedding, Dropout, LSTM
 from keras.layers.normalization import BatchNormalization
-from collections import deque
+#from collections import deque
 from keras.utils.np_utils import to_categorical
 from midi_data_RNN import noteto_RNNtrain,notetomidi
 from sklearn.model_selection import train_test_split
@@ -56,7 +56,7 @@ def train(x,y):
     print(model.summary())                          
     adam = Adam(learning_rate)
     model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['acc'])
-    model.fit(train_x,train_y,batch_size=32,epochs=1,verbose=1,validation_data=(test_x,test_y))
+    model.fit(train_x,train_y,batch_size=32,epochs=100,verbose=1,validation_data=(test_x,test_y))
     mp = "./model.h5"
     model.save(mp)
 
@@ -85,21 +85,10 @@ def train(x,y):
 def to_s2s(data):
     x = []
     y = []
+    print ("tos2s")
     for d in data:
         x.append(d[:-1])
         y.append(d[-1])
-        '''
-        for i in temp_y:
-            if i == 1 or i == 0:
-                temp_y = temp_y[1:]
-            else:
-                break
-        while len(temp_y) < 8:
-            #temp_y += int (0)
-            temp_y.append(0)
-
-        y.append(temp_y)
-        '''
         #y+= temp_y
     #print (len(x[0]))
     #print (len(y[0]))
