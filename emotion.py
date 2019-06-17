@@ -17,23 +17,36 @@ from keras.layers.normalization import BatchNormalization
 from keras.layers import Bidirectional,TimeDistributed
 import keras
 
-def cmodel():
+def cmodel(path):
     
     learning_rate = 0.000025
     input_dime = 38
     #train_x += test_x
     #train_y += test_y
-    x,y = notetotrain()
+    x = []
+    y = []
+    pathdir = os.listdir(path)
+    i = 0
+    for d in pathdir:
+        xt = notetotrain("./newmidi/" + d)
+        x.append(xt)
+        label = [i for j in range(len(xt))]
+        y.append(label)
+        i += 1 
+    
+    print (len(x))
+    print (len(y))
+    return
     train_x , test_x, train_y ,test_y = train_test_split(x,y, test_size = 0.1,random_state = 42)
     train_x = np.array(train_x)/37
     train_y = np.array(train_y)
     test_x  = np.array(test_x)/37
     test_y  = np.array(test_y)
-    num_class = 5
+    num_class = 2 
     seed = 7
     np.random.seed(seed)
     model = Sequential()
-    model.add(Embedding(input_dim=38,output_dim=128,mask_zero=True))
+    model.add(Embedding(input_dim=38,output_dim=512,mask_zero=True))
     #model.add(Bidirectional(LSTM(1024,return_sequences=True),input_shape=(52,1)))
     
     model.add(LSTM(1024,return_sequences=True))
@@ -46,7 +59,7 @@ def cmodel():
     print(model.summary())
     adam = Adam(learning_rate)
     model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['acc'])
-    model.fit(train_x,train_y,batch_size=64,epochs=4000,verbose=1,validation_data=(test_x,test_y))
+    model.fit(train_x,train_y,batch_size=512,epochs=4000,verbose=1,validation_data=(test_x,test_y))
     mp = "./model.h5"
     model.save(mp)
      
@@ -54,21 +67,21 @@ def cmodel():
 def train_test():
     data = []
     label = []
-    data ,label = notetotrain()
+    data = notetotrain()
     td = int(len(data)*0.9)
     train_x ,train_y = data[0:td],label[0:td]
     test_x  ,test_y  = data[td+1:len(data)-1] , label[td+1: len(label)-1]
     return train_x,train_y,test_x,test_y
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print ("Enter python3 emotion.py \"mode\"")
+    if len(sys.argv) != 3:
+        print ("Enter python3 emotion.py \"mode\" \"datapath\"  ")
         sys.exit(1)
     if sys.argv[1]=="test":
         print ("hello")
     elif sys.argv[1]=="train":
         #tr_x,tr_y,te_x,te_y = train_test()
-        cmodel()
+        cmodel(sys.argv[2])
 
 
 

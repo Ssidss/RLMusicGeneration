@@ -56,27 +56,26 @@ def notelen(note_tick,A):
         #A+=int(1)
     return A
 
-def notetotrain():
-    lf = open("newcluster.txt")
-    p = 127
-    labelname = lf.read()
-    labels = []
-    labels[:] = labelname.split("\n")
-    labels.pop()
+def notetotrain(midipath):
+    #lf = open("newcluster.txt")
+    #labelname = lf.read()
+    #labels = []
+    #labels[:] = labelname.split("\n")
+    #labels.pop()
     data  = []
-    label = []
-    maxlen = 127
+    #label = []
+    maxlen = 255
     minlen = maxlen / 2
-    midilist = os.listdir("./MIDIs")
+    midilist = os.listdir(midipath)
     midilist.sort()
-    datapath = "./MIDIs"
-    labelp = 0
+    datapath = midipath
+    #labelp = 0
     #for lab in labels:
     for mid in midilist:
-        
+        print ("processing %s"%(mid))
         midata = os.path.join(datapath,mid)
         midinote = miditonote(midata)
-        lname = labels[labelp]
+        #lname = labels[labelp]
         #print ("song: %s have %d data its label is: %s"%(str(mid),len(midinote),lname))
         for mm in midinote:
             md = mm
@@ -92,28 +91,28 @@ def notetotrain():
                     mdp.append(int(md[0]))
                     #mdp += md[0]
                     data.append(mdp)
-                    label.append(lname)
+                    #label.append(lname)
                     md = md[maxlen:]
-                elif len(md)>minlen and len(md)<maxlen:
+                elif len(md)>=minlen and len(md)<maxlen:
                     mdp = md[0:]
                     mdp += md[0:(maxlen-len(md))]
                     mdp.append(int(md[0]))
                     #mdp += md[0]
                     data.append(mdp)
-                    label.append(lname)
+                    #label.append(lname)
                     break
                     #md = []
-        labelp += 1
+        #labelp += 1
     print ("training data done")
 
-    labelss = np.zeros([len(label),5])
-    for i in range(len(label)):
+    #labelss = np.zeros([len(label),5])
+    #for i in range(len(label)):
         
-        j = int(label[i][-1])-1
-        labelss[i][j] = 1
+    #    j = int(label[i][-1])-1
+    #    labelss[i][j] = 1
     
     
-    return data,labelss
+    return data
     #lset = set(label)
     #c1 = label.count(lset[0])
     #c2 = label.count(lset[1])
@@ -135,7 +134,7 @@ def notetotrain():
 
 def miditypedetech(midipath):    
     path = os.path.join("./",midipath)
-    f = open("./mididatatitle",'w')
+    f = open("./newmidi.txt",'w')
     K = os.listdir(path)
     K.sort()
     print (len(K))
@@ -173,8 +172,8 @@ def miditonote(midifile):
     
     res = []
     last_note = -1
-    melodymidi = find_melody(pattern)    
-    for j in melodymidi: 
+    #melodymidi = find_melody(pattern)    
+    for j in pattern: 
         #print (i)
         output = []   
         for i in j :    
@@ -189,7 +188,12 @@ def miditonote(midifile):
                     if first_note :
                         last_note = i.pitch
                         output = notelen(i.tick,output)
-                        output.append(int(i.pitch)-35)
+
+                        if (i.pitch < lowerBound) or (i.pitch >= upperBound) :
+                            output.append(int(i.pitch)+14)
+                        else :
+                            output.append(int(i.pitch)-34)
+
                         #output += int(i.pitch)
                         #t_note  =  base_tones [str(i.pitch % 12)]
                         #t_range =  i.pitch // 12
@@ -197,7 +201,7 @@ def miditonote(midifile):
                         first_note = False
                     continue
                 if (i.pitch < lowerBound) or (i.pitch >= upperBound) :
-                    output.append(int(i.pitch%12 + 48)-35  )  
+                    output.append(int(i.pitch%12 + 14)  )  
                     #output += int(i.pitch%12+24)
                     # print "Note {} at time {} out of bounds (ignoring)".format(evt.pitch, time)
                 else:
@@ -207,7 +211,7 @@ def miditonote(midifile):
                     else:
                         last_note = i.pitch
                         output = notelen(i.tick,output)
-                        output.append(int(i.pitch)-35)
+                        output.append(int(i.pitch)-34)
                         #output += int(i.pitch)
                         #t_note  =  base_tones [str(i.pitch % 12)]
                         #t_range =  i.pitch // 12
@@ -263,13 +267,13 @@ if __name__ == '__main__':
     #    sys.stderr.write("usage: midi_data.py filename \n")
     #    sys.exit(-1)
     
-    notetotrain()
+    #notetotrain()
     #A = miditonote(sys.argv[1])
     
     #for i in range(len(A)):
     #    notetomidi(A[i],i)
 
-    #miditypedetech(sys.argv[1])
+    miditypedetech(sys.argv[1])
 
 
 
