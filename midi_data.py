@@ -6,18 +6,18 @@ import os
 
 lowerBound = 36   #C3 36
 upperBound = 71  #B7 71
-tones = {'C3' :  2,
-         'C#3':  3, 
-         'D3' :  4,
-         'D#3':  5,
-         'E3' :  6,
-         'F3' :  7,
-         'F#3':  8,
-         'G3' :  9,
-         'G#3':  10,
-         'A3' :  11,
-         'A#3':  12,
-         'B3' :  13}
+tones = {'C3' :  2,  #14  26
+         'C#3':  3,  #15  27
+         'D3' :  4,  #16  28
+         'D#3':  5,  #17  29
+         'E3' :  6,  #18  30
+         'F3' :  7,  #19  31
+         'F#3':  8,  #20  32
+         'G3' :  9,  #21  33
+         'G#3':  10, #22  34
+         'A3' :  11, #23  35
+         'A#3':  12, #24  36
+         'B3' :  13} #25  37
     
 # %  => pitch 
 # // => Range
@@ -69,12 +69,16 @@ def notetotrain(midipath):
     midilist = os.listdir(midipath)
     midilist.sort()
     datapath = midipath
+    #movepath = "../TEMP/vgm"
     #labelp = 0
     #for lab in labels:
     for mid in midilist:
-        print ("processing %s"%(mid))
+        #print ("processing %s"%(mid))
         midata = os.path.join(datapath,mid)
         midinote = miditonote(midata)
+        #os.system("mv "+midata+" "+movepath)
+        if not midinote:
+            continue
         #lname = labels[labelp]
         #print ("song: %s have %d data its label is: %s"%(str(mid),len(midinote),lname))
         for mm in midinote:
@@ -169,10 +173,13 @@ def find_melody(pattern):
 def miditonote(midifile):    
     first_note = True
     pattern = midi.read_midifile(midifile)
+    if not pattern :
+        return False
     
     res = []
     last_note = -1
-    #melodymidi = find_melody(pattern)    
+    #melodymidi = find_melody(pattern)  
+    print("%s has %d pattern"%(midifile,len(pattern)))  
     for j in pattern: 
         #print (i)
         output = []   

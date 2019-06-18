@@ -28,21 +28,28 @@ def cmodel(path):
     pathdir = os.listdir(path)
     i = 0
     for d in pathdir:
-        xt = notetotrain("./newmidi/" + d)
-        x.append(xt)
-        label = [i for j in range(len(xt))]
-        y.append(label)
+        print ("in %s / %s"%(path,d))
+        xt = notetotrain(path + d)
+        print (len(xt))
+        x += xt
+        y = y+[ i for j in range(len(xt))]
+        #y += label
         i += 1 
     
-    print (len(x))
-    print (len(y))
-    return
+    #print (len(x))
+    #print (len(y))
+    #print (y)
+    
     train_x , test_x, train_y ,test_y = train_test_split(x,y, test_size = 0.1,random_state = 42)
     train_x = np.array(train_x)/37
     train_y = np.array(train_y)
     test_x  = np.array(test_x)/37
     test_y  = np.array(test_y)
-    num_class = 2 
+    train_y  = to_categorical(train_y,i)
+    test_y  = to_categorical(test_y,i)
+    print (train_y[0])
+    print (train_x[0])
+    num_class = i
     seed = 7
     np.random.seed(seed)
     model = Sequential()
