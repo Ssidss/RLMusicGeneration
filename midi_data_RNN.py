@@ -52,23 +52,17 @@ def notelen(note_tick,A):
         #A+=int(1)
     return A
 
-def noteto_RNNtrain():
-    #lf = open("newcluster.txt")
-    #labelname = lf.read()
-    #labels = []
-    #labels[:] = labelname.split("\n")
-    #labels.pop()
+def noteto_RNNtrain(mdir):
     data  = []
-    #label = []
-    maxlen = 128
+    maxlen = 256
     minlen = maxlen / 2
-    midilist = os.listdir("./MIDIs")
+    #midilist = os.listdir("./MIDIs")
+    midilist = os.listdir(mdir)
     midilist.sort()
-    datapath = "./MIDIs"
-    #labelp = 0
-    #for lab in labels:
+    datapath = mdir #"./MIDIs"
+    print ("start")
     for mid in midilist:
-        
+        print ("%s /  %s is processing"%(mdir,mid))
         midata = os.path.join(datapath,mid)
         midinote = miditonote(midata)
         #lname = labels[labelp]
@@ -76,6 +70,7 @@ def noteto_RNNtrain():
         for mm in midinote:
             md = mm
             while (len(md)>0): 
+                #print (len(md))
                 if md[0] == 1 or md[0] == 0:
                     md = md[1:]
                     continue
@@ -89,7 +84,7 @@ def noteto_RNNtrain():
                     data.append(mdp)
                     #label.append(lname)
                     md = md[maxlen:]
-                elif len(md)>minlen and len(md)<maxlen:
+                elif len(md)>=minlen and len(md)<maxlen:
                     mdp = md
                     mdp += md[0:(maxlen-len(md))]
                     #mdp.append(int(md[0]))
@@ -133,7 +128,7 @@ def miditypedetech(midipath):
     f = open("./mididatatitle",'w')
     K = os.listdir(path)
     K.sort()
-    print (len(K))
+    #print (len(K))
     for data in K:
         datapath = os.path.join(path,data)
         #print (data,end=':')
@@ -184,14 +179,17 @@ def miditonote(midifile):
                     if first_note :
                         last_note = i.pitch 
                         output = notelen(i.tick,output)
-                        output.append(int(i.pitch) - 34)
+                        if (i.pitch <= lowerBound) or (i.pitch >= upperBound) :
+                            output.append(int(i.pitch%12 + 14)  )
+                        else :
+                            output.append(int(i.pitch) - 34)
                         #output += int(i.pitch)
                         #t_note  =  base_tones [str(i.pitch % 12)]
                         #t_range =  i.pitch // 12
                         #output.append(str(t_note)+str(t_range))
                         first_note = False
                     continue
-                if (i.pitch < lowerBound) or (i.pitch >= upperBound) :
+                if (i.pitch <= lowerBound) or (i.pitch >= upperBound) :
                     output.append(int(i.pitch%12 + 14)  )  
                     #output += int(i.pitch%12+48)
                     # print "Note {} at time {} out of bounds (ignoring)".format(evt.pitch, time)
