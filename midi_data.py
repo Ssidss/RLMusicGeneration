@@ -51,7 +51,7 @@ Melody_name = [ "main","vocal","guit","lead","guitar","vocal",
 
 
 def notelen(note_tick,A):
-    for i in range(min(note_tick//48,7)) :
+    for i in range(min(note_tick//64,7)) :
         A.append(1)
         #A+=int(1)
     return A

@@ -1,25 +1,26 @@
 #-*- coding: utf-8 -*
 import numpy as np
-import tensorflow as tf
+import random
+import keras
 import sys
 import os
-from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import train_test_split
-from keras.optimizers import rmsprop
-from midi_data import notetotrain 
-from keras.datasets import imdb
-from keras import preprocessing
+from keras.callbacks import ModelCheckpoint
+from random import choice
 from keras.models import Sequential
-from keras.layers import Dense, Embedding, Dropout, LSTM
-from keras.utils.np_utils import to_categorical
-from keras.optimizers import Adam
+from keras.layers import Dense, Dropout,Bidirectional
+from keras.optimizers import Adam,SGD
+from keras.layers import Dense,Embedding, Dropout, LSTM
 from keras.layers.normalization import BatchNormalization
-from keras.layers import Bidirectional,TimeDistributed
-import keras
+from keras.utils.np_utils import to_categorical
+from midi_data_RNN import noteto_RNNtrain,notetomidi
+from sklearn.model_selection import train_test_split
+
 
 def cmodel(path):
     
     learning_rate = 0.000025
+    batch_s = 512 
+    epoch = 40
     input_dime = 38
     #train_x += test_x
     #train_y += test_y
@@ -56,17 +57,23 @@ def cmodel(path):
     model.add(Embedding(input_dim=38,output_dim=512,mask_zero=True))
     #model.add(Bidirectional(LSTM(1024,return_sequences=True),input_shape=(52,1)))
     
-    model.add(LSTM(1024,return_sequences=True))
+    model.add(Bidirectional(LSTM(512)))
     model.add(Dropout(0.3))
-    model.add(LSTM(1024,return_sequences=False))
-    model.add(Dropout(0.3))
-    model.add(Dense(num_class,
-          kernel_initializer=keras.initializers.random_normal(stddev=0.05),
-          activation='softmax'))
+    model.add(Dense(38,
+                    kernel_initializer = keras.initializers.random_normal(stddev=0.01,seed=seed),
+                    activation="softmax"))
     print(model.summary())
     adam = Adam(learning_rate)
-    model.compile(loss='categorical_crossentropy',optimizer='adam',metrics=['acc'])
-    model.fit(train_x,train_y,batch_size=512,epochs=4000,verbose=1,validation_data=(test_x,test_y))
+    model.compile(loss='categorical_crossentropy',
+            optimizer= Adam(learning_rate),#SGD(lr=learning_rate,decay = 1e-5,
+                #momentum=0.9,nesterov=True),#'adam',
+            metrics=['acc'])
+    model.fit(train_x,train_y,
+            batch_size=batch_s,
+            epochs=epoch,
+            verbose=1,
+            validation_data=(test_x,test_y),
+            shuffle = True)
     mp = "./model.h5"
     model.save(mp)
      
