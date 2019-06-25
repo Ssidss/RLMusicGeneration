@@ -197,7 +197,7 @@ def miditonote(midifile):
                         output = notelen(i.tick,output)
 
                         if (i.pitch < lowerBound) or (i.pitch >= upperBound) :
-                            output.append(int(i.pitch)+14)
+                            output.append(int(i.pitch)%12+14)
                         else :
                             output.append(int(i.pitch)-34)
 
@@ -206,7 +206,7 @@ def miditonote(midifile):
                         #t_range =  i.pitch // 12
                         #output.append(str(t_note)+str(t_range))
                         first_note = False
-                    continue
+                        continue
                 if (i.pitch < lowerBound) or (i.pitch >= upperBound) :
                     output.append(int(i.pitch%12 + 14)  )  
                     #output += int(i.pitch%12+24)

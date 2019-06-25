@@ -12,15 +12,15 @@ from keras.optimizers import Adam,SGD
 from keras.layers import Dense,Embedding, Dropout, LSTM
 from keras.layers.normalization import BatchNormalization
 from keras.utils.np_utils import to_categorical
-from midi_data_RNN import noteto_RNNtrain,notetomidi
+from midi_data import notetotrain,notetomidi
 from sklearn.model_selection import train_test_split
 
 
 def cmodel(path):
     
-    learning_rate = 0.000025
-    batch_s = 512 
-    epoch = 40
+    learning_rate = 0.25
+    batch_s = 256 
+    epoch = 20
     input_dime = 38
     #train_x += test_x
     #train_y += test_y
@@ -54,22 +54,31 @@ def cmodel(path):
     seed = 7
     np.random.seed(seed)
     model = Sequential()
-    model.add(Embedding(input_dim=38,output_dim=512,mask_zero=True))
+    model.add(Embedding(input_dim=38,output_dim=1024,mask_zero=True))
     #model.add(Bidirectional(LSTM(1024,return_sequences=True),input_shape=(52,1)))
     
-    model.add(Bidirectional(LSTM(512)))
-    model.add(Dropout(0.3))
-    model.add(Dense(38,
+    model.add(Bidirectional(LSTM(1024)))
+    model.add(Dropout(0.1))
+    model.add(Dense(i,
                     kernel_initializer = keras.initializers.random_normal(stddev=0.01,seed=seed),
                     activation="softmax"))
     print(model.summary())
     adam = Adam(learning_rate)
+    checkpath = "./RNNcheckpoint/esaved-model-{epoch:02d}-{val_acc:.2f}.hdf5"
     model.compile(loss='categorical_crossentropy',
             optimizer= Adam(learning_rate),#SGD(lr=learning_rate,decay = 1e-5,
                 #momentum=0.9,nesterov=True),#'adam',
             metrics=['acc'])
+    #model = keras.models.load_model("./model.h5") 
+    checkpoint = ModelCheckpoint(checkpath,
+            monitor='val_acc',
+            verbose=1,
+            save_best_only = True, 
+            mode = 'max')
+    callbacks_list = [checkpoint]
     model.fit(train_x,train_y,
             batch_size=batch_s,
+            callbacks=callbacks_list,
             epochs=epoch,
             verbose=1,
             validation_data=(test_x,test_y),
