@@ -1,5 +1,6 @@
 #-*- coding: utf-8 -*
 import numpy as np
+from keras import backend as Ki
 import random
 import keras
 import sys
@@ -18,9 +19,9 @@ from sklearn.model_selection import train_test_split
 
 def cmodel(path):
     
-    learning_rate = 0.25
-    batch_s = 256 
-    epoch = 20
+    learning_rate = 0.0000025
+    batch_s = 128 
+    epoch = 5
     input_dime = 38
     #train_x += test_x
     #train_y += test_y
@@ -28,6 +29,7 @@ def cmodel(path):
     y = []
     pathdir = os.listdir(path)
     i = 0
+    
     for d in pathdir:
         print ("in %s / %s"%(path,d))
         xt = notetotrain(path + d)
@@ -46,6 +48,14 @@ def cmodel(path):
     train_y = np.array(train_y)
     test_x  = np.array(test_x)/37
     test_y  = np.array(test_y)
+    '''
+    datapath = "./edata/"
+    train_x = np.load(datapath+"trainx.npy")#,train_x)
+    train_y = np.load(datapath+"trainy.npy")#,train_y)
+    test_x =  np.load(datapath+"testx.npy")#,test_x)
+    test_y =  np.load(datapath+"testy.npy")#),test_y)
+    #np.load(
+    '''
     train_y  = to_categorical(train_y,i)
     test_y  = to_categorical(test_y,i)
     print (train_y[0])
@@ -58,13 +68,13 @@ def cmodel(path):
     #model.add(Bidirectional(LSTM(1024,return_sequences=True),input_shape=(52,1)))
     
     model.add(Bidirectional(LSTM(1024)))
-    model.add(Dropout(0.1))
+    model.add(Dropout(0.7))
     model.add(Dense(i,
-                    kernel_initializer = keras.initializers.random_normal(stddev=0.01,seed=seed),
+                    kernel_initializer = keras.initializers.random_normal(stddev=0.1,seed=seed),
                     activation="softmax"))
     print(model.summary())
-    adam = Adam(learning_rate)
-    checkpath = "./RNNcheckpoint/esaved-model-{epoch:02d}-{val_acc:.2f}.hdf5"
+    #adam = Adam(learning_rate)
+    checkpath = "../RNNcheckpoint/esaved-model-{epoch:02d}-{val_acc:.2f}.hdf5"
     model.compile(loss='categorical_crossentropy',
             optimizer= Adam(learning_rate),#SGD(lr=learning_rate,decay = 1e-5,
                 #momentum=0.9,nesterov=True),#'adam',
@@ -83,6 +93,7 @@ def cmodel(path):
             verbose=1,
             validation_data=(test_x,test_y),
             shuffle = True)
+    Ki.clear_session()
     mp = "./model.h5"
     model.save(mp)
      

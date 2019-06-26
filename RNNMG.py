@@ -6,31 +6,45 @@ import os
 from keras.callbacks import ModelCheckpoint
 from random import choice
 from keras.models import Sequential
-from keras.layers import Dense, Dropout,Bidirectional
+from keras.layers import Dense, Dropout,Bidirectional,Activation
 from keras.optimizers import Adam,SGD
 from keras.layers import Dense,Embedding, Dropout, LSTM
 from keras.layers.normalization import BatchNormalization
 from keras.utils.np_utils import to_categorical
 from midi_data_RNN import noteto_RNNtrain,notetomidi
 from sklearn.model_selection import train_test_split
+from keras.initializers import Orthogonal,RandomNormal
+import matplotlib.pyplot as plt
 
 def train(x,y):  
     # input padding  0000
     # output one hot ?  max len = 8 ==> [4,1,1,1,0,0,0,0]
     train_x , test_x, train_y ,test_y = train_test_split(x,y, test_size = 0.1)
-    learning_rate = 0.000025
-    batch_s = 512 
-    epoch = 40
+    learning_rate = 0.1
+    batch_s = 64
+    epoch = 10
     
-    train_x = (np.array(train_x))
-    train_y = (np.array(train_y))
-    test_x  = (np.array(test_x))
-    test_y  = (np.array(test_y))
+    tary = []
+    for i in range (38):
+        tary.append(train_y.count(i))
+    print (tary)
+    return
 
-    np.savetxt("./rnntrx.txt",train_x)
-    np.savetxt("./rnntex.txt",test_x)
-    np.savetxt("./rnntry.txt",train_y)
-    np.savetxt("./rnntey.txt",test_y)
+    train_x = (np.array(train_x))/37
+    train_y = (np.array(train_y))
+    test_x  = (np.array(test_x))/37
+    test_y  = (np.array(test_y))
+    '''
+    tary = []
+    for i in range (38):
+        tary.append(train_y.count(i))
+    print (tary)
+    return
+    '''
+    #np.savetxt("./rnntrx.txt",train_x)
+    #np.savetxt("./rnntex.txt",test_x)
+    #np.savetxt("./rnntry.txt",train_y)
+    #np.savetxt("./rnntey.txt",test_y)
 
     '''
     train_x = np.array(train_x)
@@ -38,8 +52,18 @@ def train(x,y):
     test_x  = np.array(test_x)
     test_y  = np.array(test_y)
     '''
+    #train_x  = to_categorical(train_x,38)
+    #test_x  = to_categorical(test_x,38)
     train_y  = to_categorical(train_y,38)
     test_y  = to_categorical(test_y,38)
+    print (train_x)
+    print (train_y)
+    '''
+    f = open("./y.txt",'w')
+    for inn in train_y:
+        f.write(str(inn))
+    '''
+    #return 
     #print (len(train_x))
     #print (len(train_x[0]))
     #print (len(train_y))
@@ -49,37 +73,68 @@ def train(x,y):
     #print (train_y)
     #return
 
-    seed = 7
+    seed = 777
     np.random.seed(seed)
-
+    out_d = 38 * 16
     model  = Sequential()
     model.add(Embedding(input_dim=38,
-        output_dim=512,        
+        output_dim=out_d,        
+        input_length = 255,
         mask_zero=True))
     #model.add(Dropout(0.3))
-    model.add(Bidirectional(LSTM(512)))
+    model.add(Bidirectional(LSTM(1024,
+                      activation = "tanh",
+                      #recurrent_activation = "hard_sigmoid",
+                      #use_bias = True,
+                      #bias_initializer="ones",
+                      recurrent_initializer = "orthogonal",
+                      kernel_initializer = "glorot_uniform",
+                      recurrent_dropout = 0.3)))
     #model.add(Dense(512))
     model.add(Dropout(0.7))
     #model.add(LSTM(1024,return_sequences=False))
     model.add(Dense(38,
-                    kernel_initializer = keras.initializers.random_normal(stddev=0.01,seed=seed),
-                    activation="softmax"))  
+                    #use_bias = True,                    
+                    kernel_initializer = RandomNormal(mean=0.0,
+                        stddev=0.1,seed=seed),#Orthogonal(gain=1.0,seed=seed)
+                    #activation="softmax"
+                    ))
+    model.add(BatchNormalization())
+    model.add(Activation("softmax"))
     print(model.summary())                          
     #adam = Adam(learning_rate)
     model.compile(loss='categorical_crossentropy',
-            optimizer= Adam(learning_rate),#SGD(lr=learning_rate,decay = 1e-5,
+            optimizer= Adam(lr = learning_rate,decay = 0.1),#SGD(lr=learning_rate,decay = 1e-5,
                 #momentum=0.9,nesterov=True),#'adam',
             metrics=['acc'])
-    checkfile = "./RNNcheckpoint/weights-{epoch:02d}-{val_acc:.2f}.hdf5"
+    checkfile = "../RNNcheckpoint/Rweights-{epoch:02d}-{val_acc:.2f}.hdf5"
     checkpoint = ModelCheckpoint(checkfile, monitor = 'val_acc', verbose = 1,save_best_only = True,mode='max')
-    model = keras.models.load_model("./model.h5")
+    #model = keras.models.load_model("./rnnmodel.h5")
+    call_back = [checkpoint]
     model.fit(train_x,train_y,
             batch_size=batch_s,
+            callbacks = call_back,
             epochs=epoch,
             verbose=1,
             validation_data=(test_x,test_y),
             shuffle = True)
-    mp = "./model.h5"
+    #print(history.history.key())
+    # summarize history for accuracy
+    '''
+    plt.plot(history.history['acc'])
+    plt.plot(history.history['val_acc'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left') 
+    plt.show()
+# summarize history for loss plt.plot(history.history['loss']) plt.plot(history.history['val_loss']) plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left') 
+    plt.show()
+    '''
+    mp = "./rnnmodel.h5"
     model.save(mp)
 
     '''

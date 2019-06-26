@@ -47,7 +47,7 @@ Melody_name = [ "main","vocal","guit","lead","guitar","vocal",
 
 
 def notelen(note_tick,A):
-    for i in range(min(note_tick//64,7)) :
+    for i in range(min(note_tick//64,3)) :
         A.append(1)
         #A+=int(1)
     return A
@@ -67,7 +67,11 @@ def noteto_RNNtrain(mdir):
         midinote = miditonote(midata)
         #lname = labels[labelp]
         #print ("song: %s have %d data its label is: %s"%(str(mid),len(midinote),lname))
+        #print (midinote)
         for mm in midinote:
+            #print (mm)
+            if len(set(mm)) < 10 :
+                continue
             md = mm
             while (len(md)>0): 
                 #print (len(md))
@@ -188,7 +192,7 @@ def miditonote(midifile):
                         #t_range =  i.pitch // 12
                         #output.append(str(t_note)+str(t_range))
                         first_note = False
-                    continue
+                        continue
                 if (i.pitch <= lowerBound) or (i.pitch >= upperBound) :
                     output.append(int(i.pitch%12 + 14)  )  
                     #output += int(i.pitch%12+48)
