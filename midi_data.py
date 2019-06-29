@@ -64,7 +64,7 @@ def notetotrain(midipath):
     #labels.pop()
     data  = []
     #label = []
-    maxlen = 255
+    maxlen = 127
     minlen = maxlen / 2
     midilist = os.listdir(midipath)
     midilist.sort()
@@ -77,11 +77,11 @@ def notetotrain(midipath):
         midata = os.path.join(datapath,mid)
         midinote = miditonote(midata)
         #os.system("mv "+midata+" "+movepath)
-        if not midinote:
-            continue
         #lname = labels[labelp]
         #print ("song: %s have %d data its label is: %s"%(str(mid),len(midinote),lname))
         for mm in midinote:
+            if len(set(mm)) < 7:
+                continue
             md = mm
             while (len(md)>0): 
                 if md[0] == 1 or md[0] == 0:
@@ -280,7 +280,7 @@ if __name__ == '__main__':
     #for i in range(len(A)):
     #    notetomidi(A[i],i)
 
-    miditypedetech(sys.argv[1])
+    #miditypedetech(sys.argv[1])
 
 
 

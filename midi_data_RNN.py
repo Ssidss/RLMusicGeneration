@@ -2,7 +2,7 @@ import midi
 import numpy as np
 import sys
 import os
-
+import random
 
 lowerBound = 36   #C3 36
 upperBound = 71  #B7 71
@@ -47,14 +47,14 @@ Melody_name = [ "main","vocal","guit","lead","guitar","vocal",
 
 
 def notelen(note_tick,A):
-    for i in range(min(note_tick//64,3)) :
+    for i in range(min(note_tick//64,7)) :
         A.append(1)
         #A+=int(1)
     return A
 
 def noteto_RNNtrain(mdir):
     data  = []
-    maxlen = 256
+    maxlen = 128
     minlen = maxlen / 2
     #midilist = os.listdir("./MIDIs")
     midilist = os.listdir(mdir)
@@ -70,7 +70,7 @@ def noteto_RNNtrain(mdir):
         #print (midinote)
         for mm in midinote:
             #print (mm)
-            if len(set(mm)) < 10 :
+            if len(set(mm)) < 6 :
                 continue
             md = mm
             while (len(md)>0): 
@@ -106,7 +106,7 @@ def noteto_RNNtrain(mdir):
         j = int(label[i][-1])-1
         labelss[i][j] = 1
     '''
-    
+    #print (data) 
     return data
     #lset = set(label)
     #c1 = label.count(lset[0])
@@ -167,14 +167,16 @@ def miditonote(midifile):
     
     res = []
     last_note = -1
-    melodymidi = find_melody(pattern)    
-    for j in melodymidi: 
-        #print (i)
+    #melodymidi = find_melody(pattern)    
+    for j in pattern: 
+        #print (j)
         output = []   
         for i in j :    
             #if isinstance(i, midi.TrackNameEvent):
                 #print (i.text)     
             if isinstance(i, midi.NoteEvent):
+                if i.tick>0 and i.tick < 49:
+                    continue
                 if i.pitch == last_note:
                     output = notelen(i.tick,output)
                     last_note = -1
@@ -212,14 +214,16 @@ def miditonote(midifile):
         #print (len(output))
         res.append(output)
         #print (output)
+    #print (res)
     return res
 
 #f = open("./miditest.txt",'w')
 #f.write(str(A))  
 
 def notetomidi(notearray,i):
-    note_len = 54
-
+    mini_len = 64
+    note_len = mini_len
+    print (notearray)
     pattern = midi.Pattern()
     track = midi.Track()
     pattern.append(track)
@@ -228,12 +232,14 @@ def notetomidi(notearray,i):
     last_note = 0
     for n in notearray:
         if n == 1 :
-            note_len = note_len + 54
-        elif int(n) > 1 :   
+            note_len = note_len + mini_len
+        elif int(n) > 1 :  
+            if note_len == mini_len:
+                note_len += mini_len*random.randint(0,3)    
             track.append(midi.NoteOnEvent(tick=note_len, channel=0, data=[last_note, 0]))         
-            track.append(midi.NoteOnEvent(tick=0, channel=0, data=[n, 110]))            
-            last_note = n
-            note_len = 54
+            track.append(midi.NoteOnEvent(tick=0, channel=0, data=[n+34, 110]))            
+            last_note = n + 34
+            note_len = mini_len
     
     eot = midi.EndOfTrackEvent(tick=1)
     track.append(eot)
@@ -256,15 +262,15 @@ def notetomidi(notearray,i):
 
 if __name__ == '__main__':
     
-    #if len(sys.argv) != 2:
-    #    sys.stderr.write("usage: midi_data.py filename \n")
-    #    sys.exit(-1)
+    if len(sys.argv) != 2:
+        sys.stderr.write("usage: midi_data.py filename \n")
+        sys.exit(-1)
     
-    notetotrain()
-    #A = miditonote(sys.argv[1])
-    
-    #for i in range(len(A)):
-    #    notetomidi(A[i],i)
+    A = noteto_RNNtrain(sys.argv[1])
+    #print (A)
+    #A = miditonote(sys.argv[1]) 
+    for i in range(len(A)):
+        notetomidi(A[i],i)
 
     #miditypedetech(sys.argv[1])
 

@@ -8,20 +8,22 @@ import os
 from keras.callbacks import ModelCheckpoint
 from random import choice
 from keras.models import Sequential
-from keras.layers import Dense, Dropout,Bidirectional
+from keras.layers import Dense, Dropout,Bidirectional,Activation
 from keras.optimizers import Adam,SGD
-from keras.layers import Dense,Embedding, Dropout, LSTM
+from keras.layers import Dense,Embedding, Dropout, LSTM, Input
 from keras.layers.normalization import BatchNormalization
 from keras.utils.np_utils import to_categorical
 from midi_data import notetotrain,notetomidi
 from sklearn.model_selection import train_test_split
+from keras.regularizers import l2
 
 
 def cmodel(path):
     
-    learning_rate = 0.0000025
-    batch_s = 128 
-    epoch = 5
+    l2_n = 0.0025
+    learning_rate = 0.05
+    batch_s = 256 
+    epoch = 20
     input_dime = 38
     #train_x += test_x
     #train_y += test_y
@@ -42,12 +44,16 @@ def cmodel(path):
     #print (len(x))
     #print (len(y))
     #print (y)
-    
+    tray = []
     train_x , test_x, train_y ,test_y = train_test_split(x,y, test_size = 0.1,random_state = 42)
+    for ia in range (i):
+        tray.append(train_y.count(ia))
+    print (tray)
     train_x = np.array(train_x)/37
     train_y = np.array(train_y)
     test_x  = np.array(test_x)/37
     test_y  = np.array(test_y)
+
     '''
     datapath = "./edata/"
     train_x = np.load(datapath+"trainx.npy")#,train_x)
@@ -64,19 +70,49 @@ def cmodel(path):
     seed = 7
     np.random.seed(seed)
     model = Sequential()
-    model.add(Embedding(input_dim=38,output_dim=1024,mask_zero=True))
+    o_d = 38 * 5
+    model.add(Embedding(input_dim=38,output_dim=o_d,input_length=128))
     #model.add(Bidirectional(LSTM(1024,return_sequences=True),input_shape=(52,1)))
     
-    model.add(Bidirectional(LSTM(1024)))
-    model.add(Dropout(0.7))
+    model.add(Bidirectional(LSTM(100,
+                            #activation = "tanh",
+                            use_bias = True,
+                            #recurrent_initializer = "orthogonal",
+                            #kernel_initializer = "glorot_uniform",
+                            recurrent_dropout = 0.2)))
+    model.add(Dropout(0.2))
+    '''
+    model.add(Bidirectional(LSTM(64,
+                            activation = "tanh",
+                            use_bias = True,
+                            recurrent_initializer = "orthogonal",
+                            kernel_initializer = "glorot_uniform",
+                            recurrent_dropout = 0.7)))
+    model.add(Dropout(0.3))
+    '''
+    model.add(Dense(50,
+              kernel_initializer = keras.initializers.random_normal(stddev=0.1,seed=seed),
+              kernel_regularizer = l2(l2_n)
+          ))
+    model.add(Dropout(0.2))
+    model.add(Dense(25,
+              kernel_initializer = keras.initializers.random_normal(stddev=0.1,seed=seed),
+              kernel_regularizer = l2(l2_n)
+          ))
+    model.add(Dropout(0.2))
+
     model.add(Dense(i,
                     kernel_initializer = keras.initializers.random_normal(stddev=0.1,seed=seed),
-                    activation="softmax"))
+                    kernel_regularizer = l2(l2_n)
+                    #activation="softmax")
+                    ))
+    model.add(BatchNormalization())
+    model.add(Activation("softmax"))
     print(model.summary())
     #adam = Adam(learning_rate)
     checkpath = "../RNNcheckpoint/esaved-model-{epoch:02d}-{val_acc:.2f}.hdf5"
     model.compile(loss='categorical_crossentropy',
-            optimizer= Adam(learning_rate),#SGD(lr=learning_rate,decay = 1e-5,
+            optimizer= Adam(lr=learning_rate,decay = 0.05),#SGD(lr=learning_rate,decay = 1e-5,
                 #momentum=0.9,nesterov=True),#'adam',
             metrics=['acc'])
     #model = keras.models.load_model("./model.h5") 
@@ -93,8 +129,8 @@ def cmodel(path):
             verbose=1,
             validation_data=(test_x,test_y),
             shuffle = True)
-    Ki.clear_session()
-    mp = "./model.h5"
+    #Ki.clear_session()
+    mp = "./emodel.h5"
     model.save(mp)
      
 
