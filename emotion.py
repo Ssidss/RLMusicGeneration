@@ -20,10 +20,10 @@ from keras.regularizers import l2
 
 def cmodel(path):
     
-    l2_n = 0.0025
-    learning_rate = 0.05
-    batch_s = 256 
-    epoch = 20
+    l2_n = 0.25
+    learning_rate = 0.01
+    batch_s = 16 
+    epoch = 4
     input_dime = 38
     #train_x += test_x
     #train_y += test_y
@@ -45,14 +45,15 @@ def cmodel(path):
     #print (len(y))
     #print (y)
     tray = []
-    train_x , test_x, train_y ,test_y = train_test_split(x,y, test_size = 0.1,random_state = 42)
+    train_x , test_x, train_y ,test_y = train_test_split(x,y, test_size = 0.1,random_state = 1)
     for ia in range (i):
-        tray.append(train_y.count(ia))
+        tray.append(test_y.count(ia))
     print (tray)
     train_x = np.array(train_x)/37
     train_y = np.array(train_y)
     test_x  = np.array(test_x)/37
     test_y  = np.array(test_y)
+    
 
     '''
     datapath = "./edata/"
@@ -64,9 +65,14 @@ def cmodel(path):
     '''
     train_y  = to_categorical(train_y,i)
     test_y  = to_categorical(test_y,i)
-    print (train_y[0])
-    print (train_x[0])
+    #print (train_y[0])
+    #print (train_x[0])
     num_class = i
+    #print (i)
+    #print (num_class)
+    #print (len(train_y))
+    #print (len(train_y[0]))
+    #print (train_y[0])
     seed = 7
     np.random.seed(seed)
     model = Sequential()
@@ -74,35 +80,34 @@ def cmodel(path):
     model.add(Embedding(input_dim=38,output_dim=o_d,input_length=128))
     #model.add(Bidirectional(LSTM(1024,return_sequences=True),input_shape=(52,1)))
     
-    model.add(Bidirectional(LSTM(100,
-                            #activation = "tanh",
-                            use_bias = True,
-                            #recurrent_initializer = "orthogonal",
-                            #kernel_initializer = "glorot_uniform",
-                            recurrent_dropout = 0.2)))
-    model.add(Dropout(0.2))
-    '''
-    model.add(Bidirectional(LSTM(64,
+    model.add(Bidirectional
+            (LSTM(64,
                             activation = "tanh",
                             use_bias = True,
-                            recurrent_initializer = "orthogonal",
+                            #recurrent_initializer = "orthogonal",
                             kernel_initializer = "glorot_uniform",
-                            recurrent_dropout = 0.7)))
-    model.add(Dropout(0.3))
-    '''
-    model.add(Dense(50,
-              kernel_initializer = keras.initializers.random_normal(stddev=0.1,seed=seed),
-              kernel_regularizer = l2(l2_n)
-          ))
-    model.add(Dropout(0.2))
-    model.add(Dense(25,
-              kernel_initializer = keras.initializers.random_normal(stddev=0.1,seed=seed),
-              kernel_regularizer = l2(l2_n)
-          ))
-    model.add(Dropout(0.2))
+                            recurrent_dropout = 0.9)))
+    model.add(Dropout(0.9))
 
+    '''
+    model.add(Dense(512,
+                    kernel_initializer = keras.initializers.random_normal(stddev=1,seed=99),
+                    kernel_regularizer = l2(l2_n),
+                    activation="relu")
+                    )
+    model.add(Dense(512,
+                    kernel_initializer = keras.initializers.random_normal(stddev=1,seed=1),
+                    kernel_regularizer = l2(l2_n),
+                    activation="relu")
+                    )
+    model.add(Dense(512,
+                    kernel_initializer = keras.initializers.random_normal(stddev=1,seed=2),
+                    kernel_regularizer = l2(l2_n),
+                    activation="relu")
+                    )
+    '''
     model.add(Dense(i,
-                    kernel_initializer = keras.initializers.random_normal(stddev=0.1,seed=seed),
+                    kernel_initializer = keras.initializers.random_normal(stddev=1,seed=3),
                     kernel_regularizer = l2(l2_n)
                     #activation="softmax")
                     ))
@@ -112,10 +117,10 @@ def cmodel(path):
     #adam = Adam(learning_rate)
     checkpath = "../RNNcheckpoint/esaved-model-{epoch:02d}-{val_acc:.2f}.hdf5"
     model.compile(loss='categorical_crossentropy',
-            optimizer= Adam(lr=learning_rate,decay = 0.05),#SGD(lr=learning_rate,decay = 1e-5,
+            optimizer= Adam(lr=learning_rate,decay = 0.01),#SGD(lr=learning_rate,decay = 1e-5,
                 #momentum=0.9,nesterov=True),#'adam',
             metrics=['acc'])
-    #model = keras.models.load_model("./model.h5") 
+    #model = keras.models.load_model("./emodel.h5") 
     checkpoint = ModelCheckpoint(checkpath,
             monitor='val_acc',
             verbose=1,

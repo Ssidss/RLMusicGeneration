@@ -80,7 +80,7 @@ def notetotrain(midipath):
         #lname = labels[labelp]
         #print ("song: %s have %d data its label is: %s"%(str(mid),len(midinote),lname))
         for mm in midinote:
-            if len(set(mm)) < 7:
+            if len(set(mm)) < 5:
                 continue
             md = mm
             while (len(md)>0): 
