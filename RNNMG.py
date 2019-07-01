@@ -20,6 +20,9 @@ from keras.regularizers import l2
 def train(x,y):  
     # input padding  0000
     # output one hot ?  max len = 8 ==> [4,1,1,1,0,0,0,0]
+    #up = np.array(x)
+    #np.save("initarray.npy",up)
+    #return
     train_x , test_x, train_y ,test_y = train_test_split(x,y, test_size = 0.2)
     l2_n = 0.0025
     learning_rate = 0.01
@@ -90,7 +93,7 @@ def train(x,y):
     
     #model.add(Input(shape=(55,38)))
     #model.add(Dropout(0.3))
-    model.add(Bidirectional(LSTM(2048,
+    model.add(Bidirectional(LSTM(512,
                       activation = "tanh",
                       #recurrent_activation = "hard_sigmoid",
                       use_bias = True,
@@ -101,7 +104,7 @@ def train(x,y):
                       )))
 
     
-#    model.add(Dropout(0.7))
+    model.add(Dropout(0.7))
 #    model.add(Dense(512))
 #    model.add(Dropout(0.3))
     #model.add(LSTM(1024,return_sequences=False))

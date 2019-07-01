@@ -21,9 +21,9 @@ from keras.regularizers import l2
 def cmodel(path):
     
     l2_n = 0.25
-    learning_rate = 0.01
-    batch_s = 16 
-    epoch = 4
+    learning_rate = 0.001
+    batch_s = 32 
+    epoch = 40
     input_dime = 38
     #train_x += test_x
     #train_y += test_y
@@ -31,10 +31,12 @@ def cmodel(path):
     y = []
     pathdir = os.listdir(path)
     i = 0
+    label = []
     
     for d in pathdir:
         print ("in %s / %s"%(path,d))
         xt = notetotrain(path + d)
+        label.append(str(d))
         print (len(xt))
         x += xt
         y = y+[ i for j in range(len(xt))]
@@ -44,6 +46,7 @@ def cmodel(path):
     #print (len(x))
     #print (len(y))
     #print (y)
+    print (label)
     tray = []
     train_x , test_x, train_y ,test_y = train_test_split(x,y, test_size = 0.1,random_state = 1)
     for ia in range (i):
@@ -76,12 +79,12 @@ def cmodel(path):
     seed = 7
     np.random.seed(seed)
     model = Sequential()
-    o_d = 38 * 5
+    o_d = 38 * 100
     model.add(Embedding(input_dim=38,output_dim=o_d,input_length=128))
     #model.add(Bidirectional(LSTM(1024,return_sequences=True),input_shape=(52,1)))
     
     model.add(Bidirectional
-            (LSTM(64,
+            (LSTM(2048,
                             activation = "tanh",
                             use_bias = True,
                             #recurrent_initializer = "orthogonal",

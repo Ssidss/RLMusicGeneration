@@ -3,12 +3,59 @@ import sys
 from midi_data_RNN import notetomidi
 import os
 import numpy as np
+from random import choice
 
 
 
-def generation(model,inp):
+def generation(model,inp,inpspace):
     model = keras.models.load_model(model)
     print (model.summary())
+    inputspace = np.load(inpspace)
+
+    sample = choice(inputspace)
+    output = sample
+    output = list(output)
+    sample = np.array(sample)
+    window = output
+    window = list(window)
+    
+
+
+
+
+    #return
+    for i in range(256):
+        new_input = sample.reshape(1,127)
+        new_input = new_input
+        next_note = model.predict(new_input)
+        #print (len(next_note[0]))
+        next_note = np.random.choice(38,1,p=next_note[0])
+
+        print (next_note)
+        #return
+        output.append(int(next_note))
+        
+        window = output[i+1:]
+        #print (len(window))
+        sample = np.array(window)
+
+
+        
+
+
+
+    
+    print (output)
+    output = np.array(output)
+    notetomidi(output,0)
+    #print (model.predict_classes(asdf))
+    #print ("hellow")
+
+if __name__ == '__main__':
+    generation(sys.argv[1],sys.argv[2],sys.argv[3]) #input model init_array
+
+
+    '''    
     asdf = []
     input_a = np.load(inp)
     input_a = input_a[:127]
@@ -39,7 +86,7 @@ def generation(model,inp):
 
     #print (len(aa))
     aa = np.array(aa)
-    '''
+    
     print (str(aa))
     bb = str(aa).split(" ")
     print (len(bb))
@@ -51,27 +98,3 @@ def generation(model,inp):
 
     print (len(prob))
     '''
-    #return
-    for i in range(128):
-        next_note = model.predict_classes(asdf)
-        print (next_note)
-        #return
-        b.append(int(next_note))
-
-        a = [b[i+1:],]
-        asdf = []
-        #a = a/37
-        asdf.append(a)
-
-        #print (asdf)
-        #input_a[0] += next_note
-        #asdf[0] = 
-    
-    print (b)
-    b = np.array(b)
-    notetomidi(b,0)
-    #print (model.predict_classes(asdf))
-    #print ("hellow")
-
-if __name__ == '__main__':
-    generation(sys.argv[1],sys.argv[2]) #input model init_array

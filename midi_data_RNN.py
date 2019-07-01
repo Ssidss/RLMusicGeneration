@@ -235,7 +235,7 @@ def notetomidi(notearray,i):
             note_len = note_len + mini_len
         elif int(n) > 1 :  
             if note_len == mini_len:
-                note_len += mini_len*random.randint(0,3)    
+                note_len += mini_len*(random.randint(0,2))
             track.append(midi.NoteOnEvent(tick=note_len, channel=0, data=[last_note, 0]))         
             track.append(midi.NoteOnEvent(tick=0, channel=0, data=[n+34, 110]))            
             last_note = n + 34
