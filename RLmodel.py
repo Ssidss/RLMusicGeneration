@@ -5,6 +5,8 @@ import random
 from random import choice
 import random
 import keras
+import math
+from scipy import stats
 from midi_data_RNN import notetomidi
 from keras.models import Sequential
 from keras.layers import Dense, Dropout
@@ -17,6 +19,10 @@ from keras.regularizers import l2
 from collections import deque
 
 
+#         c d e f g a  b  c  d  e  f  g  a  b
+
+
+
 
 
 class music_env(object):
@@ -24,6 +30,7 @@ class music_env(object):
     
     def __init__(self,space_len,RNN_model,Style_model,initnpy):
         print ("hello")
+        self.tone_map = self.init_tone()
         self.space_len = space_len
         self.RNN_model = RNN_model
         self.Style_model = Style_model
@@ -31,9 +38,40 @@ class music_env(object):
         self.action_space = [i for i in range(0,38)]  # 0 for rest 1 for nothing 2 : 37 c3 to b5
 #------------------------- hand input ----------------------------# 
         self.action_size = 38           #action number 0~37
-
         self.init_space = np.load(initnpy)
-      
+        
+
+
+    def init_tone(self):
+        tone_C = [2,4,6,7,9,11,13,14,16,18,19,21,23,25]
+        tone_C = [x-12 for x in tone_C] + tone_C + [x+12 for x in tone_C] 
+        all_tone = []
+        all_tone.append(tone_C)
+        #tone_C_S = [x+1 for x in tone_C]
+        for i in range(1,12):
+            tone = [x+i for x in tone_C]
+            all_tone.append(tone)
+        return all_tone.copy()
+
+    def det_which_tone(self,state):
+        note_map = set(state)
+        if 0 in note_map:
+            note_map.remove(0) #remove 1 and 0
+        if 1 in note_map:
+            note_map.remove(1)
+        w_tone = []
+        for t_m in self.tone_map:
+            not_count = 0
+            for i in note_map:
+                if i not in t_m:
+                    not_count += 1
+            w_tone.append(not_count)
+        
+        return w_tone.index(min(w_tone))
+
+
+
+    
     
     def action_space_num(self):
         return 38
@@ -59,7 +97,8 @@ class music_env(object):
         predict_input = np.array(predict_input).reshape((1,128))
         result = self.Style_model.predict(predict_input)[0]
         reward = result[style_label]  #get point
-        reward = reward * 200
+        #reward = reward * 200
+        print (reward)
         return reward  
     
     def RNN_note_reward(self,cur_state,action):
@@ -70,6 +109,7 @@ class music_env(object):
         reward = result[action]
         reward = reward * 100
         #print ("RNN_note_done")
+        
         return reward 
         
     def state_shape(self):    #maybe large style note will be good result????
@@ -79,15 +119,33 @@ class music_env(object):
         return self.action_size
 
 #-----------------------------
-    def if_in_same_tone(self,melody): # delete 0 and 1 
-        det_m = set(melody)
-        
-        return 1
+    def if_in_same_tone(self,action,tone_code): # delete 0 and 1 
+        if action in self.tone_map[tone_code]:
+            return 200
+        else :
+            return (-100)
         
 
     def if_cont_note(self,melody):    # only check last note?
-        cont_count = 0     # check last not 1 note
-        return 1
+        cont_count = 1     # check last not 1 note
+        last_note = []
+        for i in range(len(melody)-1,0,-1):
+            if melody[i] > 1 or melody == 0:
+                last_note.append(melody[i])
+            if len(last_note) == 8:
+                break
+        t_note = last_note[0]
+        for i in range(1,len(last_note)):
+            if last_note[i] == t_note:
+                cont_count += 1
+            else :
+                break
+        if cont_count > 4:        # if > 4 give negative
+            cont_count = (-1) * cont_count * cont_count 
+        else :
+            cont_count = 10
+
+        return (cont_count * 3)  # get 10 or -25 ~ -64
 
     def big_move(self,melody):       # if big move and same way 
         # find last not 1 note 
@@ -102,12 +160,12 @@ class music_env(object):
                 break
 
         hop_reward = abs(f_last_note - s_last_note)
-        if hop_reward > 10 :
+        if hop_reward > 5 :
             hop_reward = hop_reward * hop_reward * (-1)
         else :
-            hop_reward = 10
+            hop_reward = 50
 
-        return hop_reward
+        return hop_reward      # 10 or -n**2 35**2? -100 -1225
     
     def if_note_too_long(self,melody):
         #if cont 1 is too many
@@ -120,21 +178,34 @@ class music_env(object):
         if one_count > 7:
             one_count = one_count * one_count * (-1)
 
-        return one_count
+        return one_count      # number of 1 1 ~ 8 or  -n**2  -64 ~ infinite
 
     def melody_similarity(self,melody):
         m_l = len(melody)
-        a = melody[(m_l/2):(m_l)]
-        b = melody[(m_l/2-m_l/4):(m_l-m_l/4)]
+        m_2 = int(m_l/2)
+        m_4 = int(m_2/4)
+        a = melody[m_2:(m_l)]
+        b = melody[(m_2-m_4):(m_l-m_4)]
         #----reward between 0~1 ----#
-        similary_reward = stats.pearsonr(a,b)   #Correlation coefficient 
-        similary_reward -= 0.5 #____ -0.5 ~ 0.5 _____
-        similary_reward  = similary_reward * (-1) #if high get low reward
-        return similary_reward * 10  # get -5 ~ 5 point
+        sweight = 200
+        c = stats.pearsonr(a,b)[0]
+        if math.isnan(c):
+            similary_reward = 0
+        else:
+            similary_reward = round(c,2)
+        #similary_reward = max(0.00001,stats.pearsonr(a,b))   #Correlation coefficient 
+        #print (similary_reward)
+        #similary_reward = similary_reward[0]
+        similary_reward = similary_reward * sweight #0 ~ 200
+        similary_reward = int(similary_reward) #turn into int
+        similary_reward = similary_reward - (sweight/2) #____ -100 ~ 100 _____
+        similary_reward = similary_reward * (-1) #if high get low reward
+        return similary_reward # get -100 ~ 100 point
 #--------------------
     def calculate(self,sp,cn,bm,tl,st,cr,nr):
-        return sp+cn+bm+tl+st+cr+nr
-    def step(self,cur_state,action):
+        cr = round(cr,2)
+        return (sp+cn+bm+tl+st+nr)*cr*cr*cr
+    def step(self,cur_state,action,tone_code):
     #--------------- Network reward -------------------#
         cr = self.class_reward(cur_state,action)
         nr = self.RNN_note_reward(cur_state,action)
@@ -145,14 +216,17 @@ class music_env(object):
         cn = self.if_cont_note(melody)
         bm = self.big_move(melody)
         tl = self.if_note_too_long(melody)
-        st = self.if_in_same_tone(melody)
-        
+        st = self.if_in_same_tone(action,tone_code)
+        #print ("cur_state %d"%(len(cur_state)))
         new_state = cur_state[2:].copy()         #[style state] slide window
+        new_state.append(action)
         new_state.insert(0,cur_state[0])  #add style_code in head
+        #print ("cur_state (%d) new_state(%d)"%(len(cur_state),len(new_state)))
         #print (len(new_state))
         #sys.exit(1)
         
         reward = self.calculate(sp,cn,bm,tl,st,cr,nr)
+        reward = round(reward,2)
         done = False
         return new_state,reward,done
 
@@ -240,7 +314,13 @@ class DQN:
             return
 
         samples = random.sample(self.memory, batch_size)
+        print ("")
+        print ("")
         for sample in samples:
+            sys.stdout.write("\033[F")
+            sys.stdout.write("\033[K")
+            sys.stdout.write("\033[F")
+            sys.stdout.write("\033[K")
             state, action, reward, new_state, done = sample
             #print (len(state))
             state = np.array(state).reshape(1,128)
@@ -286,13 +366,13 @@ def main(RNN_model,Style_model,initnpy):
     env     = music_env(127,RNN_model,Style_model,initnpy)#gym.make("MountainCar-v0")
     gamma   = 0.9
     epsilon = .95
-    trials  = 10
-    trial_len = 512
+    trials  = 200
+    trial_len = 128
     cur_state = []#make_init()  ## init state
     #init_style = random.randint(0,3)  # [classical , jazz , hymn , vgm]
     # updateTargetNetwork = 1000
     f_m_list = []
-    final_music = []
+    #final_music = []
     
 
     dqn_agent = DQN(env=env)
@@ -300,20 +380,23 @@ def main(RNN_model,Style_model,initnpy):
     for trial in range(trials):
         init_style = random.randint(0,3)
         cur_state = env.reset()  #.reshape(1,len(cur_state))
+        tone_code = env.det_which_tone(cur_state)
         cur_state = list(cur_state)
         final_music = cur_state.copy()
         cur_state.insert(0,init_style)
+        total_reward = 0
         #print (len(cur_state))
         for step in range(trial_len):
             print ("----- step %d -----"%(step))
             action = dqn_agent.act(cur_state)
-            #print (cur_state)
             final_music.append(action)
-            #print (cur_state)
-            #print (cur_state)
-            new_state, reward, done = env.step(cur_state,action)
-            #print (cur_state)
-            cur_state = cur_state[0:128] # why cur_state add action?
+
+            new_state, reward, done = env.step(cur_state,action,tone_code)
+            total_reward += reward
+            #print (len(new_state))
+            #cur_state = cur_state[0:128] # why cur_state add action?
+            
+
 
 
             if step == trial_len - 1 :
@@ -324,7 +407,9 @@ def main(RNN_model,Style_model,initnpy):
             dqn_agent.replay()       # internally iterates default (prediction) model
             print ("__target_train__")
             dqn_agent.target_train() # iterates target model
-            cur_state = new_state
+            #print (len(new_state))
+            cur_state = new_state.copy()
+            #print (len(new_state))
 
         '''
        if step >= 199:
@@ -338,9 +423,9 @@ def main(RNN_model,Style_model,initnpy):
            dqn_agent.save_model("success.model")
            break
         '''
-        f_m_list.append(final_music)
-        print (f_m_list)
-        notetomidi(f_m_list,trial)
+        #f_m_list.append(final_music)
+        print (final_music)
+        notetomidi(final_music,trial,init_style,total_reward)
         dqn_agent.save_model("../LRcheckpoint/trial-{}.model".format(trial))
 
 if __name__ == "__main__":
