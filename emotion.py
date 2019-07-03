@@ -8,7 +8,8 @@ import os
 from keras.callbacks import ModelCheckpoint
 from random import choice
 from keras.models import Sequential
-from keras.layers import Dense, Dropout,Bidirectional,Activation
+from keras.layers import Dense, Dropout,Bidirectional,Activation,TimeDistributed
+from keras.layers import Conv1D,MaxPooling1D,Reshape,GlobalAveragePooling1D
 from keras.optimizers import Adam,SGD
 from keras.layers import Dense,Embedding, Dropout, LSTM, Input
 from keras.layers.normalization import BatchNormalization
@@ -16,14 +17,15 @@ from keras.utils.np_utils import to_categorical
 from midi_data import notetotrain,notetomidi
 from sklearn.model_selection import train_test_split
 from keras.regularizers import l2
+from keras.initializers import glorot_normal
 
 
 def cmodel(path):
     
-    l2_n = 0.25
+    l2_n = 0.000025
     learning_rate = 0.001
-    batch_s = 32 
-    epoch = 40
+    batch_s = 128
+    epoch = 20
     input_dime = 38
     #train_x += test_x
     #train_y += test_y
@@ -57,6 +59,9 @@ def cmodel(path):
     test_x  = np.array(test_x)/37
     test_y  = np.array(test_y)
     
+    #train_xr = [train_x,train_x,train_x]
+    #test_xr =  [test_x,test_x,test_x]
+
 
     '''
     datapath = "./edata/"
@@ -79,43 +84,62 @@ def cmodel(path):
     seed = 7
     np.random.seed(seed)
     model = Sequential()
-    o_d = 38 * 100
-    model.add(Embedding(input_dim=38,output_dim=o_d,input_length=128))
-    #model.add(Bidirectional(LSTM(1024,return_sequences=True),input_shape=(52,1)))
+    o_d = 38 * 120
     
-    model.add(Bidirectional
-            (LSTM(2048,
-                            activation = "tanh",
-                            use_bias = True,
-                            #recurrent_initializer = "orthogonal",
-                            kernel_initializer = "glorot_uniform",
-                            recurrent_dropout = 0.9)))
-    model.add(Dropout(0.9))
+    '''
+    model.add(Reshape((128, 1), input_shape=((128),)))
+    model.add(Conv1D(64, 1, activation='relu' ))
+    model.add(Conv1D(64, 1, activation='relu'))
+    model.add(MaxPooling1D(3))
+    model.add(Conv1D(128, 1, activation='relu'))
+    model.add(Conv1D(128, 1, activation='relu'))
+    model.add(GlobalAveragePooling1D())
+    model.add(Dropout(0.5))
+    '''
 
-    '''
-    model.add(Dense(512,
-                    kernel_initializer = keras.initializers.random_normal(stddev=1,seed=99),
-                    kernel_regularizer = l2(l2_n),
-                    activation="relu")
-                    )
-    model.add(Dense(512,
-                    kernel_initializer = keras.initializers.random_normal(stddev=1,seed=1),
-                    kernel_regularizer = l2(l2_n),
-                    activation="relu")
-                    )
-    model.add(Dense(512,
-                    kernel_initializer = keras.initializers.random_normal(stddev=1,seed=2),
-                    kernel_regularizer = l2(l2_n),
-                    activation="relu")
-                    )
-    '''
+
+    
+    model.add(Embedding(input_dim=38,output_dim=o_d,input_length=128))
+
+    model.add(Dense(128,activation = "relu")) 
+
+    #model.add(Embedding(input_dim=38,output_dim=o_d,input_length=128))
+    #model.add(Bidirectional(LSTM(1024,return_sequences=True),input_shape=(52,1)))
+    model.add(LSTM(128, return_sequences=True,
+                        activation = "relu",
+                        #use_bias = True,
+                        recurrent_initializer = "ones",
+                        kernel_initializer = glorot_normal(seed = 1)))    
+    #model.add(Dropout(0.1)) 
+    model.add(Dense(128,activation = "relu")) 
+
+    model.add(LSTM(64, return_sequences=True,
+                        activation = "relu",
+                        #use_bias = True,
+                        recurrent_initializer = "ones",
+                        kernel_initializer = glorot_normal(seed = 2)))     
+    #model.add(Dropout(0.1)) 
+    model.add(Dense(64,activation = "relu"))  
+    #model.add(Dropout(0.1))
+
+    model.add(#Bidirectional
+                        (LSTM(64,
+                        activation = "tanh",
+                        use_bias = True,
+                        recurrent_initializer = "orthogonal",
+                        kernel_initializer = glorot_normal(seed = 3))))
+
+    
+
+
     model.add(Dense(i,
                     kernel_initializer = keras.initializers.random_normal(stddev=1,seed=3),
                     kernel_regularizer = l2(l2_n)
-                    #activation="softmax")
+                    #activation="softmax"
                     ))
-    model.add(BatchNormalization())
+    #model.add(BatchNormalization())
     model.add(Activation("softmax"))
+    
     print(model.summary())
     #adam = Adam(learning_rate)
     checkpath = "../RNNcheckpoint/esaved-model-{epoch:02d}-{val_acc:.2f}.hdf5"
@@ -127,7 +151,7 @@ def cmodel(path):
     checkpoint = ModelCheckpoint(checkpath,
             monitor='val_acc',
             verbose=1,
-            save_best_only = True, 
+            save_best_only = False, 
             mode = 'max')
     callbacks_list = [checkpoint]
     model.fit(train_x,train_y,

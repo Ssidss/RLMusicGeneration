@@ -53,6 +53,14 @@ class music_env(object):
             all_tone.append(tone)
         return all_tone.copy()
 
+    def det_style(self,state):
+        st = state.copy()
+        st.append(1)
+        st = st[:128]
+        input_ = np.array(st)
+        input_ = input_.reshape(1,128)
+        return self.Style_model.predict_classes(input_)
+
     def det_which_tone(self,state):
         note_map = set(state)
         if 0 in note_map:
@@ -98,7 +106,7 @@ class music_env(object):
         result = self.Style_model.predict(predict_input)[0]
         reward = result[style_label]  #get point
         #reward = reward * 200
-        print (reward)
+        #print (reward)
         return reward  
     
     def RNN_note_reward(self,cur_state,action):
@@ -141,14 +149,18 @@ class music_env(object):
             else :
                 break
         if cont_count > 4:        # if > 4 give negative
-            cont_count = (-1) * cont_count * cont_count 
+            cont_count = (-1) * cont_count * cont_count * 3  # 
+        elif t_note == 0 and cont_count > 0 :
+            cont_count = (-1) * (120)
         else :
             cont_count = 10
 
-        return (cont_count * 3)  # get 10 or -25 ~ -64
+        return (cont_count * 3)  # get 10 or -25 ~ -64  * 3
 
-    def big_move(self,melody):       # if big move and same way 
+    def big_move(self,melody,action):       # if big move and same way 
         # find last not 1 note 
+        if action == 1 or action == 0 :
+            return 30
         f_last_note = 0
         s_last_note = 0
         for i in range(len(melody)-1,0,-1):
@@ -163,8 +175,8 @@ class music_env(object):
         if hop_reward > 5 :
             hop_reward = hop_reward * hop_reward * (-1)
         else :
-            hop_reward = 50
-
+            hop_reward = 10
+        hop_reward = hop_reward * 3
         return hop_reward      # 10 or -n**2 35**2? -100 -1225
     
     def if_note_too_long(self,melody):
@@ -176,7 +188,10 @@ class music_env(object):
             else :
                 break
         if one_count > 7:
-            one_count = one_count * one_count * (-1)
+            one_count = one_count * (-1)
+        elif one_count == 0:
+            one_count = -10
+        one_count =  one_count * one_count        
 
         return one_count      # number of 1 1 ~ 8 or  -n**2  -64 ~ infinite
 
@@ -203,8 +218,8 @@ class music_env(object):
         return similary_reward # get -100 ~ 100 point
 #--------------------
     def calculate(self,sp,cn,bm,tl,st,cr,nr):
-        cr = round(cr,2)
-        return (sp+cn+bm+tl+st+nr)*cr*cr*cr
+        #cr = round(cr,2)
+        return (sp+cn+bm+tl+st+nr)+(cr+cr+cr)*300
     def step(self,cur_state,action,tone_code):
     #--------------- Network reward -------------------#
         cr = self.class_reward(cur_state,action)
@@ -214,7 +229,7 @@ class music_env(object):
     #-------------- music theory point ----------------#
         sp = self.melody_similarity(melody)
         cn = self.if_cont_note(melody)
-        bm = self.big_move(melody)
+        bm = self.big_move(melody,action)
         tl = self.if_note_too_long(melody)
         st = self.if_in_same_tone(action,tone_code)
         #print ("cur_state %d"%(len(cur_state)))
@@ -226,7 +241,7 @@ class music_env(object):
         #sys.exit(1)
         
         reward = self.calculate(sp,cn,bm,tl,st,cr,nr)
-        reward = round(reward,2)
+        #reward = round(reward,2)
         done = False
         return new_state,reward,done
 
@@ -315,12 +330,10 @@ class DQN:
 
         samples = random.sample(self.memory, batch_size)
         print ("")
-        print ("")
         for sample in samples:
             sys.stdout.write("\033[F")
             sys.stdout.write("\033[K")
-            sys.stdout.write("\033[F")
-            sys.stdout.write("\033[K")
+            
             state, action, reward, new_state, done = sample
             #print (len(state))
             state = np.array(state).reshape(1,128)
@@ -335,6 +348,8 @@ class DQN:
                 target[0][action] = reward + Q_future * self.gamma
 
             self.model.fit(state, target, epochs=1, verbose=1)
+            sys.stdout.write("\033[F")
+            sys.stdout.write("\033[K")
 
     def target_train(self):
 
@@ -364,10 +379,10 @@ def main(RNN_model,Style_model,initnpy):
 
     
     env     = music_env(127,RNN_model,Style_model,initnpy)#gym.make("MountainCar-v0")
-    gamma   = 0.9
+    gamma   = 0.999
     epsilon = .95
     trials  = 200
-    trial_len = 128
+    trial_len = 32
     cur_state = []#make_init()  ## init state
     #init_style = random.randint(0,3)  # [classical , jazz , hymn , vgm]
     # updateTargetNetwork = 1000
@@ -377,24 +392,30 @@ def main(RNN_model,Style_model,initnpy):
 
     dqn_agent = DQN(env=env)
     steps = []
-    for trial in range(trials):
-        init_style = random.randint(0,3)
-        cur_state = env.reset()  #.reshape(1,len(cur_state))
+    for trial in range(trials):   
+        print ("__Trail %d ______"%(trial))     
+        cur_state = env.reset()  #.reshape(1,len(cur_state))        
         tone_code = env.det_which_tone(cur_state)
         cur_state = list(cur_state)
+        init_style = int(env.det_style(cur_state))
         final_music = cur_state.copy()
         cur_state.insert(0,init_style)
         total_reward = 0
         #print (len(cur_state))
+        print ("")
         for step in range(trial_len):
-            print ("----- step %d -----"%(step))
+                        
+            
             action = dqn_agent.act(cur_state)
             final_music.append(action)
-
+            
             new_state, reward, done = env.step(cur_state,action,tone_code)
             total_reward += reward
             #print (len(new_state))
             #cur_state = cur_state[0:128] # why cur_state add action?
+            sys.stdout.write("\033[F")
+            sys.stdout.write("\033[K")
+            print ("Step %d action = [%s]total_reward = (%d)>"%(step,str(action),total_reward))
             
 
 
@@ -403,9 +424,10 @@ def main(RNN_model,Style_model,initnpy):
                 done = True
             #print (new_state)
             dqn_agent.remember(cur_state, action, reward, new_state, done)    
-            print ("_____replay_____")
+            #print ("_____replay_____")
             dqn_agent.replay()       # internally iterates default (prediction) model
-            print ("__target_train__")
+            #print ("__target_train__")
+            
             dqn_agent.target_train() # iterates target model
             #print (len(new_state))
             cur_state = new_state.copy()

@@ -220,14 +220,26 @@ def miditonote(midifile):
 #f = open("./miditest.txt",'w')
 #f.write(str(A))  
 
-def notetomidi(notearray,i):
+def notetomidi(notearray,i,style_code,reward):
     mini_len = 64
     note_len = mini_len
-    print (notearray)
+    
+    #print (notearray)
     pattern = midi.Pattern()
     track = midi.Track()
     pattern.append(track)
-
+    #style_code = #notearray[0]
+    notearray = notearray[1:]
+    if style_code == 2:  #hymn
+        h , f = 3,8
+    elif style_code == 0: #classical
+        h , f = 0,2
+    elif style_code == 1: #jazz
+        h , f = 1,6
+    elif style_code == 3: #vgm
+        h , f = 0,8
+    else :
+        h,f = 0,5
     
     last_note = 0
     for n in notearray:
@@ -235,7 +247,7 @@ def notetomidi(notearray,i):
             note_len = note_len + mini_len
         elif int(n) > 1 :  
             if note_len == mini_len:
-                note_len += mini_len*(random.randint(0,2))
+                note_len += mini_len*(random.randint(h,f))
             track.append(midi.NoteOnEvent(tick=note_len, channel=0, data=[last_note, 0]))         
             track.append(midi.NoteOnEvent(tick=0, channel=0, data=[n+34, 110]))            
             last_note = n + 34
@@ -243,8 +255,10 @@ def notetomidi(notearray,i):
     
     eot = midi.EndOfTrackEvent(tick=1)
     track.append(eot)
+    style = ["classical","jazz","hymn","vgm"]
+    #print (style_code)
 
-    midi.write_midifile("example"+str(i)+".mid",pattern)
+    midi.write_midifile("example"+str(i)+style[style_code]+str(reward)+".mid",pattern)
 
             
 

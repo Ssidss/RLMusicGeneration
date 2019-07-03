@@ -27,7 +27,7 @@ def train(x,y):
     l2_n = 0.0025
     learning_rate = 0.01
     batch_s = 64
-    epoch = 10
+    epoch = 100
     
     tary = []
     #for yy in train_y:
@@ -124,8 +124,9 @@ def train(x,y):
                 #momentum=0.9,nesterov=True),#'adam',
             metrics=['acc'])
     checkfile = "../RNNcheckpoint/Rweights-{epoch:02d}-{val_acc:.2f}.hdf5"
-    checkpoint = ModelCheckpoint(checkfile, monitor = 'val_acc', verbose = 1,save_best_only = True,mode='max')
-    #model = keras.models.load_model("./rnnmodel.h5")
+    checkpoint = ModelCheckpoint(checkfile, monitor = 'val_acc', verbose = 1,
+                save_best_only = False,mode='max')
+    model = keras.models.load_model("./rnnmodel.h5")
     call_back = [checkpoint]
 
     model.fit(train_x,train_y,
