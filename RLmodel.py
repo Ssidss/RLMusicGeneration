@@ -19,10 +19,7 @@ from keras.regularizers import l2
 from collections import deque
 
 
-#         c d e f g a  b  c  d  e  f  g  a  b
-
-
-
+#     DQN
 
 
 class music_env(object):
@@ -36,7 +33,7 @@ class music_env(object):
         self.Style_model = Style_model
         self.initnpy_path = initnpy
         self.action_space = [i for i in range(0,38)]  # 0 for rest 1 for nothing 2 : 37 c3 to b5
-#------------------------- hand input ----------------------------# 
+    #------------------------- hand input ----------------------------
         self.action_size = 38           #action number 0~37
         self.init_space = np.load(initnpy)
         
@@ -105,9 +102,9 @@ class music_env(object):
         predict_input = np.array(predict_input).reshape((1,128))
         result = self.Style_model.predict(predict_input)[0]
         reward = result[style_label]  #get point
-        #reward = reward * 200
+        reward = reward * 200
         #print (reward)
-        return reward  
+        return reward    #200
     
     def RNN_note_reward(self,cur_state,action):
         input_s = cur_state[1:]
@@ -115,10 +112,10 @@ class music_env(object):
         input_s = np.array(input_s).reshape(1,len(input_s))
         result = self.RNN_model.predict(input_s)[0]
         reward = result[action]
-        reward = reward * 100
+        reward = reward * 300
         #print ("RNN_note_done")
         
-        return reward 
+        return reward   #100
         
     def state_shape(self):    #maybe large style note will be good result????
         return 129   #state[0] for class state[1:] for music note
@@ -126,12 +123,12 @@ class music_env(object):
     def action_num(self):
         return self.action_size
 
-#-----------------------------
+    #-----------------------------
     def if_in_same_tone(self,action,tone_code): # delete 0 and 1 
         if action in self.tone_map[tone_code]:
-            return 200
+            return 100
         else :
-            return (-100)
+            return (-300)
         
 
     def if_cont_note(self,melody):    # only check last note?
@@ -140,7 +137,7 @@ class music_env(object):
         for i in range(len(melody)-1,0,-1):
             if melody[i] > 1 or melody == 0:
                 last_note.append(melody[i])
-            if len(last_note) == 8:
+            if len(last_note) == 10:
                 break
         t_note = last_note[0]
         for i in range(1,len(last_note)):
@@ -148,14 +145,14 @@ class music_env(object):
                 cont_count += 1
             else :
                 break
-        if cont_count > 4:        # if > 4 give negative
-            cont_count = (-1) * cont_count * cont_count * 3  # 
+        if cont_count > 2:        # if > 4 give negative
+            cont_count = (-1) * cont_count * cont_count * 30  # 
         elif t_note == 0 and cont_count > 0 :
             cont_count = (-1) * (120)
         else :
-            cont_count = 10
+            cont_count = 20
 
-        return (cont_count * 3)  # get 10 or -25 ~ -64  * 3
+        return (cont_count * 3)  # get 60 or  -240 ~
 
     def big_move(self,melody,action):       # if big move and same way 
         # find last not 1 note 
@@ -172,12 +169,12 @@ class music_env(object):
                 break
 
         hop_reward = abs(f_last_note - s_last_note)
-        if hop_reward > 5 :
+        if hop_reward > 7 :
             hop_reward = hop_reward * hop_reward * (-1)
         else :
             hop_reward = 10
         hop_reward = hop_reward * 3
-        return hop_reward      # 10 or -n**2 35**2? -100 -1225
+        return hop_reward      # 30 or  -49*3 ~ -1225*3
     
     def if_note_too_long(self,melody):
         #if cont 1 is too many
@@ -188,19 +185,21 @@ class music_env(object):
             else :
                 break
         if one_count > 7:
-            one_count = one_count * (-1)
+            one_count = one_count * (-1) * one_count 
         elif one_count == 0:
-            one_count = -10
-        one_count =  one_count * one_count        
+            one_count = -50
+        else :
+            one_count =  one_count * one_count        
 
-        return one_count      # number of 1 1 ~ 8 or  -n**2  -64 ~ infinite
+        return one_count      # number of 1~49 or -50 or -64~
 
     def melody_similarity(self,melody):
-        m_l = len(melody)
-        m_2 = int(m_l/2)
-        m_4 = int(m_2/4)
-        a = melody[m_2:(m_l)]
-        b = melody[(m_2-m_4):(m_l-m_4)]
+        m_1 = len(melody)   #128
+        m_2 = int(m_1/2)    #64
+        m_4 = int(m_2/2)    #32
+        m_8 = int(m_4/2)    #16
+        a = melody[(m_1-m_4):]  # 128-32 ~  len = 32
+        b = melody[(m_1-m_4-m_8):(m_1-m_8)]  #128-32-16  ~128-16
         #----reward between 0~1 ----#
         sweight = 200
         c = stats.pearsonr(a,b)[0]
@@ -215,11 +214,12 @@ class music_env(object):
         similary_reward = int(similary_reward) #turn into int
         similary_reward = similary_reward - (sweight/2) #____ -100 ~ 100 _____
         similary_reward = similary_reward * (-1) #if high get low reward
-        return similary_reward # get -100 ~ 100 point
-#--------------------
+        similary_reward -= 50
+        return similary_reward # get -150 ~ 50 point
+    #--------------------
     def calculate(self,sp,cn,bm,tl,st,cr,nr):
         #cr = round(cr,2)
-        return (sp+cn+bm+tl+st+nr)+(cr+cr+cr)*300
+        return ((sp+cn+bm+tl+st+nr)+(cr+cr+cr))/100
     def step(self,cur_state,action,tone_code):
     #--------------- Network reward -------------------#
         cr = self.class_reward(cur_state,action)
@@ -285,15 +285,16 @@ class DQN:
                input_length = self.input_state_len,
                ))
         model.add(Bidirectional(LSTM(512,
-                      activation = "tanh",
+                      #activation = "tanh",
                       #recurrent_activation = "hard_sigmoid",
                       use_bias = True,
                       #bias_initializer="ones",
                       recurrent_initializer = "orthogonal",
                       kernel_initializer = "glorot_uniform",
-                      recurrent_dropout = 0.7
+                      #recurrent_dropout = 0.7
                       )))
-        model.add(Dropout(0.7))
+        #model.add(Dropout(0.7))
+        model.add(Dense(256))
        #model.add(Dense(48, activation="relu"))
        #model.add(Dense(24, activation="relu"))
         model.add(Dense(self.env.action_num(),
@@ -318,6 +319,20 @@ class DQN:
 
         return np.argmax(self.model.predict(state)[0]) # choice predict note
 
+    def pre_train(self,state,state_act):
+        state = np.array(state).reshape(1,128)
+        bonus_y = np.zeros(38)
+        bonus_y = bonus_y.reshape(1,38)
+        for act in state_act:
+            bonus_y[0][act] = 300
+            self.model.fit(state,bonus_y,epochs=1,verbose=1)
+            sys.stdout.write("\033[F")
+            sys.stdout.write("\033[K")
+            sys.stdout.write("\033[F")
+            sys.stdout.write("\033[K")
+            
+
+
     def remember(self, state, action, reward, new_state, done):
         #print (len(state))
         self.memory.append([state, action, reward, new_state, done])
@@ -330,6 +345,7 @@ class DQN:
 
         samples = random.sample(self.memory, batch_size)
         print ("")
+        b_c=0
         for sample in samples:
             sys.stdout.write("\033[F")
             sys.stdout.write("\033[K")
@@ -346,7 +362,8 @@ class DQN:
             else:
                 Q_future = max(self.target_model.predict(new_state)[0])
                 target[0][action] = reward + Q_future * self.gamma
-
+            print ("batch_%d_"%(b_c),end="")
+            b_c+=1
             self.model.fit(state, target, epochs=1, verbose=1)
             sys.stdout.write("\033[F")
             sys.stdout.write("\033[K")
@@ -382,7 +399,7 @@ def main(RNN_model,Style_model,initnpy):
     gamma   = 0.999
     epsilon = .95
     trials  = 200
-    trial_len = 32
+    trial_len = 64
     cur_state = []#make_init()  ## init state
     #init_style = random.randint(0,3)  # [classical , jazz , hymn , vgm]
     # updateTargetNetwork = 1000
@@ -397,10 +414,12 @@ def main(RNN_model,Style_model,initnpy):
         cur_state = env.reset()  #.reshape(1,len(cur_state))        
         tone_code = env.det_which_tone(cur_state)
         cur_state = list(cur_state)
-        init_style = int(env.det_style(cur_state))
+        state_act = set(cur_state)
+        init_style = random.randint(0,3)#int(env.det_style(cur_state))
         final_music = cur_state.copy()
         cur_state.insert(0,init_style)
         total_reward = 0
+        dqn_agent.pre_train(cur_state,state_act)
         #print (len(cur_state))
         print ("")
         for step in range(trial_len):
@@ -427,8 +446,8 @@ def main(RNN_model,Style_model,initnpy):
             #print ("_____replay_____")
             dqn_agent.replay()       # internally iterates default (prediction) model
             #print ("__target_train__")
-            
-            dqn_agent.target_train() # iterates target model
+            if step % 15 == 0:
+                dqn_agent.target_train() # iterates target model
             #print (len(new_state))
             cur_state = new_state.copy()
             #print (len(new_state))
@@ -459,3 +478,5 @@ if __name__ == "__main__":
     Style_model = keras.models.load_model(sys.argv[2]) #argv[2] for Style Model
 
     main(RNN_model = RNN_model,Style_model = Style_model, initnpy = sys.argv[3])
+
+
